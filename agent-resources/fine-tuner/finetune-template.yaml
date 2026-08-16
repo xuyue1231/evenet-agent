@@ -1,0 +1,152 @@
+platform:
+  data_parquet_dir: <data_parquet_dir>
+  data_parquet_val_dir: <data_parquet_val_dir>
+  number_of_workers: 4
+  resources_per_worker: {
+    "CPU": 30,
+    "GPU": 1,
+  }
+  batch_size: 1024
+  prefetch_batches: 2
+  use_gpu: true
+
+logger:
+  wandb:
+    project: "<project_name>"
+    run_name: &logger_name "<run_name>"
+    tags: ["<project_name>"]
+    simplified: false
+  local:
+    save_dir: "<log_save_dir>"
+    name: *logger_name
+    version: "v1"
+
+
+options:
+  default: options/options.yaml
+
+  # overwrites
+  Training:
+    total_epochs: 50
+    epochs: 50
+    log_gradient_step: 1
+    pretrain_model_load_path: "<pretrain_ckpt_path>"
+    model_checkpoint_save_path: "<model_checkpoint_save_path>"
+
+    diffusion_every_n_epochs: 4
+    diffusion_every_n_steps: 1
+    eval_metrics_every_n_epochs: 1
+
+    learning_rate: &lr 0.00025
+    learning_rate_body: &lr_body 0.000025
+    weight_decay: &wd 0.01
+    Components:
+      GlobalEmbedding:
+        learning_rate: *lr_body
+        weight_decay: *wd
+        optimizer_type: "AdamW"
+      PET:
+        learning_rate: *lr_body
+        weight_decay: *wd
+        optimizer_type: "AdamW"
+      ObjectEncoder:
+        learning_rate: *lr_body
+        weight_decay: *wd
+        optimizer_type: "AdamW"
+      Classification:
+        include: false
+        include_cross_term: false
+      Regression:
+        include: false
+      Assignment:
+        include: false
+      Segmentation:
+        include: false
+      GlobalGeneration:
+        include: false
+      ReconGeneration:
+        include: false
+      TruthGeneration:
+        # Template default: every head above is `include: false`. Set `true` for
+        # whichever head(s) the approved plan selected, `false` for the rest —
+        # no head is a hardcoded default. When enabling a head, also set its
+        # matching key under ProgressiveTraining.stages[].loss_weights below to
+        # a nonzero value (this block's default is 1.0, tuned for TruthGeneration
+        # as the sole active head — revisit if multiple heads are active at once).
+        include: false
+        warm_up: true
+        learning_rate: *lr
+        weight_decay: *wd
+        optimizer_type: "AdamW"
+        diffusion_steps: 200
+
+
+    EarlyStopping:
+      patience: 100
+      min_delta: 0.0
+      monitor: "lr-body"
+      mode: "min"
+      verbose: true
+
+    ProgressiveTraining:
+      stages:
+        - name: "full_training"
+          epoch_ratio: 1.0
+          transition_ratio: 1.0
+          # Template default: all zero, matching Components above. Set the key(s)
+          # matching your enabled head(s) to [1.0, 1.0] — generation-truth for
+          # TruthGeneration, generation-recon for ReconGeneration, classification
+          # (+classification-noised) for Classification, regression for Regression,
+          # assignment for Assignment, segmentation for Segmentation. GlobalGeneration
+          # has no dedicated key here — check options/options.yaml if enabling it.
+          loss_weights:
+            generation-truth: [ 0.0, 0.0 ]
+            generation-recon: [ 0.0, 0.0 ]
+            classification: [ 0.0, 0.0 ]
+            classification-noised: [  0.0, 0.0 ]
+            regression: [ 0.0, 0.0 ]
+            assignment: [ 0.0, 0.0 ]
+            segmentation: [ 0.0, 0.0 ]
+          train_parameters:
+            noise_prob: [ 1.0, 1.0 ]
+            reco_attn_mask: [ 0.45, 0.45 ]
+            ema_decay: [ 0.999, 0.999 ]
+
+    FAMO:
+      turn_on: false
+
+    # This EMA block is tuned for TruthGeneration (the diffusion generative head
+    # benefits from EMA-smoothed weights). If TruthGeneration is NOT among the
+    # enabled heads, review whether these settings still make sense rather than
+    # keeping them by default.
+    EMA:
+      enable: true               # Enable or disable EMA
+      decay: 0.999               # EMA decay rate
+      start_epoch: 0             # Start updating EMA after this epoch
+      update_every_n_steps: 1    # Update EMA every N steps
+
+      replace_model_after_load: true    # After loading checkpoint, copy EMA weights into model
+      replace_model_at_end: false         # At training end, copy EMA weights into model (will not save EMA weights)
+
+  Dataset:
+    dataset_limit: 1.0
+    normalization_file: "<normalization_file>"
+    dataset_limit_apply_to_val_set: false
+
+network:
+  default: network/network-20M.yaml
+
+  # remove feature drop
+  Body:
+    PET:
+      feature_drop: 0.0
+  ReconGeneration:
+    feature_drop: 0.0
+  TruthGeneration:
+    feature_drop: 0.0
+
+event_info:
+  default: event_info/<project_name>_process.yaml
+
+resonance:
+  default: resonance/standard_model.yaml

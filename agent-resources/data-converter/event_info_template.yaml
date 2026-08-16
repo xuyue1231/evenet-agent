@@ -1,0 +1,86 @@
+EXCLUDE:
+  Momentum: &Momentum
+    - pt
+    - eta
+    - phi
+
+# ---------------------------------------------------
+# REQUIRED - INPUTS - List all inputs to EveNet here.
+# ---------------------------------------------------
+INPUTS:
+  # -----------------------------------------------------------------------------
+  # REQUIRED - SEQUENTIAL - inputs which can have an arbitrary number of vectors.
+  # -----------------------------------------------------------------------------
+  SEQUENTIAL:
+    Source:
+      energy: log_normalize
+      pt: log_normalize
+      eta: normalize
+      phi: normalize_uniform
+      btag: none
+      isLepton: none
+      charge: none
+
+  # ---------------------------------------------------------------------
+  # REQUIRED - GLOBAL - inputs which will have a single vector per event.
+  # ---------------------------------------------------------------------
+  GLOBAL:
+    # Fixed to match the pretraining corpus's own GLOBAL.Conditions schema —
+    # always use exactly this, even when the plan has no real global conditions.
+    # This is required for the pretrained checkpoint's GlobalEmbedding weights to
+    # actually load via safe_load_state's shape-matching (evenet/utilities/tool.py)
+    # instead of being silently skipped for a shape mismatch. Populate whichever of
+    # these the plan's data actually has with real values (see data-converter.md);
+    # zero-fill the rest. If the plan has a custom condition not in this list, that's
+    # not handled by this fixed-schema approach yet — flag it rather than guessing.
+    Conditions:
+      met: log_normalize
+      met_phi: normalize
+      nLepton: none
+      nbJet: none
+      nJet: none
+      HT: log_normalize
+      HT_lep: log_normalize
+      M_all: log_normalize
+      M_leps: log_normalize
+      M_bjets: log_normalize
+
+EVENT:
+
+PERMUTATIONS:
+
+CLASSIFICATIONS:
+  EVENT:
+    - signal
+
+CLASSLABEL:
+  EVENT:
+    signal:
+      - [ <class_labels> ]
+
+
+PARTICLE_PROPERTIES:
+  - Energy
+  - Spin
+  - nProduct_BJet
+  - nProduct_Jet
+  - nProduct_Lepton
+  - Product_LeptonCharge
+
+GENERATIONS:
+  Conditions:
+    <generation_conditions>
+  GlobalTargets:
+    <global_targets>
+
+  Events:
+    - energy
+    - pt
+    - eta
+    - phi
+    - btag
+    - isLepton
+    - charge
+
+  Neutrinos:
+    <invisible_features>

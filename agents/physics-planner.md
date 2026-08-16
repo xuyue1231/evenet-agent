@@ -68,9 +68,7 @@ You turn a physics analysis request into a concrete, reviewable plan for the Eve
 
 9. **If `GlobalGeneration` is selected**, state which of the global conditions (from step 5) are the generation targets.
 
-10. **Recommend a split mode** and say why:
-   - `2fold` (50:50 odd/even, no val set) when the downstream observable needs a prediction for *every* event with no train/test leakage — e.g. a measurement over the full dataset (spin-density matrix elements, any per-event physical quantity you'll histogram or fit across the whole sample).
-   - `standard` (80:10:10) when the downstream task is a discrimination/search metric evaluated on a held-out test set (e.g. Significance Improvement Characteristic) where you don't need full-sample coverage.
+10. **Default the split mode to `standard` (80:10:10).** State it as the default in every plan regardless of the physics goal — don't pick `2fold` on the analysis's behalf. If the downstream observable needs a prediction for *every* event with no train/test leakage (e.g. a per-event physical quantity you'll histogram or fit across the whole sample — spin-density matrix elements, and similar full-sample measurements), say so explicitly and note that `2fold` (50:50 odd/even, no val set) is available and would better suit that case, but leave the choice to the user during plan review rather than switching to it yourself.
 
 11. **Define the downstream observable precisely.** This is what `result-synthesizer` will compute — don't leave it vague. State the observable's name, the formula/methodology (cite the EveNet paper's convention where applicable — SIC for anomaly/search significance, angular-moment projections for spin-density matrix elements, etc.), and exactly which reconverted-output branches/fields feed into it.
 
@@ -103,7 +101,7 @@ Return the plan as a single markdown document the orchestrator can paste directl
 
 **Global generation targets**: <only if GlobalGeneration selected — which conditions>
 
-**Split mode**: <standard 80:10:10 | 2fold> — <why>
+**Split mode**: `standard` (80:10:10) — default. <if the observable needs full-sample coverage, note that `2fold` (50:50 odd/even, no val set) is available and would better suit it, and that switching is the user's call>
 
 **Training**: checkpoint `checkpoints.20M.a4.last.ckpt` (EveNet-Full) unless noted otherwise; wall time `<HH:MM:SS>`; heads to enable in the finetune YAML: <list>
 

@@ -10,13 +10,30 @@ Ask the user whether they are on:
 
 Record the environment type for use by the rest of the pipeline.
 
-## Step 2: Clone the EveNet repository
+## Step 2: Clone the EveNet repository, and pin the `evenet` submodule
 
 ```bash
 git clone --recursive https://github.com/EveNet-HEP/EveNet-Full.git
+cd EveNet-Full
 ```
 
-If the repo is already cloned, skip this step.
+**Then pin the `evenet` submodule to the last verified-working commit — don't leave it on whatever HEAD the clone happened to pull:**
+
+```bash
+cd evenet
+git checkout b6518dc
+cd ..
+```
+
+**Why**: `EveNet-HEP/Core`'s default branch has shipped a regression before. Commit `d2aa1fa` (2026-04-20, "update analysis.yaml and train.yaml to change pt normalization method and adjust neutrino binning parameters...") silently swapped the invisible-particle (`TruthGeneration`) feature-padding scheme for a learned `InvisibleInputProjector`, but never updated `Normalizer.denormalize()`'s padding-removal logic to match — the result is a `padding_size=0` case that Python's `x[:-0]` slicing (which means "keep nothing," not "remove nothing") turns into a 0-length tensor, crashing any `TruthGeneration` analysis's validation step and `predict.py` with a broadcast `RuntimeError`. None of this is mentioned in the commit message, so it's not something a changelog skim would catch. Discovered 2026-08-17 by diffing a freshly-cloned, broken install against `EveNet-photon` (an older install pinned at `b6518dc`, which predates the regression and works).
+
+If the repo is already cloned, don't assume it's safe — check the submodule's actual commit before trusting it:
+
+```bash
+cd EveNet-Full/evenet && git log -1 --oneline
+```
+
+If it's not at `b6518dc` (or a later commit you've separately verified doesn't have this bug — e.g. by confirming EveNet-HEP/Core fixed the padding regression upstream, or by running a `TruthGeneration` analysis through a full validation epoch without the `Normalizer.denormalize` crash), check out `b6518dc` as above before proceeding. Skip the clone step itself if already cloned, but don't skip the pin check.
 
 ## Step 3: Pull the container image
 

@@ -8,6 +8,10 @@ This project runs physics analyses with agentic AI — a planning-then-approval-
 
 Subagents invoked via the `Agent` tool run to completion and return a result — they have no live channel back to the user mid-execution, no way to pose a question and wait for a reply. **Only you (running as the top-level session) can actually talk to the user.** So every question the pipeline needs answered — physics/analysis choices, wall-time, checkpoint override, output naming, everything — is gathered by `physics-planner` into a single plan and resolved in one approval exchange (Step 3/4 below). None of the other five subagents ever ask the user anything; they consume the approved plan as given. If you're ever tempted to have `fine-tuner` or `data-reconverter` "check with the user" about something, that belongs in `physics-planner`'s plan instead — route it there rather than inventing a second interaction point.
 
+## Filesystem scope
+
+Only read, write, or search inside the directory Claude Code was opened in, plus any absolute path the user explicitly gives you (input data location, an existing `EveNet-Full` path, a weights directory, etc.). Never `find`/`ls`/`grep` sibling directories on your own initiative to "discover" things — an existing `EveNet-Full` install, downloaded weights, a reference repo to diff a bug against — even when it would be genuinely useful. If something you need isn't at a path the user has already given you, ask for the path rather than going looking for it yourself. This applies to what you tell subagents to do too — don't hand one a task that requires it to explore beyond paths it's been explicitly given.
+
 ## Step 0: Get the physics request
 
 If not already stated in the conversation, this is the first thing to ask — everything else is plumbing in service of this. Ask the user (one message):
@@ -33,7 +37,7 @@ Then check the filesystem, don't assume:
 - `EveNet-Full` is actually present at the path in hand (freshly cloned or user-provided) — for a user-provided path, don't stop at "the directory exists": confirm it looks like a real EveNet-Full checkout (e.g. `scripts/train.py`, `evenet/` submodule populated, `share/` templates present) before relying on it, since a wrong or partial path will otherwise surface as a confusing failure much later in the pipeline instead of here
 - The `evenet` submodule inside it is pinned to a verified-working commit (`git -C <evenet_full>/evenet log -1 --oneline`) — its default branch has shipped at least one undocumented regression before (see `setup.md` Step 2 for what to check it against); this applies equally to a freshly-cloned repo and a user-provided existing one — neither is automatically safe to use
 - The container image is actually present (`shifterimg images` on NERSC / `docker images` on Docker) — `physics-planner` will fail its first real step without this, since it needs a working container to inspect the input data (ROOT or `.pt`)
-- `Weights/` has both pretrained checkpoints
+- `Weights/` (at `<parent-of-EveNet-Full>/Weights`, per `setup.md` Step 5 — or wherever the user has explicitly told you the checkpoints live) has both pretrained checkpoints; don't search other directories for them, per the filesystem-scope rule above
 
 If anything is missing, read and follow `.claude/agent-resources/setup/setup.md` to fill the gap (it covers cloning, pulling the image, and downloading weights — skip whichever parts are already done). Don't invoke `physics-planner` against a half-set-up environment and hope for the best.
 

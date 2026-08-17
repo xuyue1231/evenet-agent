@@ -57,7 +57,7 @@ Record these for use by the rest of the pipeline (do not store API keys in any c
 
 ## Step 5: Download pretrained weights
 
-Download checkpoint files from HuggingFace into a `Weights` folder in the user's project directory (the parent of EveNet-Full, or wherever they prefer):
+Download checkpoint files from HuggingFace into a `Weights` folder at a fixed, predictable location — next to `EveNet-Full` (i.e. `<parent-of-EveNet-Full>/Weights`), not "wherever's convenient":
 
 ```bash
 mkdir -p Weights
@@ -67,7 +67,7 @@ wget -O Weights/checkpoints.20M.a4.last.ckpt \
   "https://huggingface.co/Avencast/EveNet/resolve/main/checkpoints.20M.a4.last.ckpt"
 ```
 
-If checkpoints already exist, verify their presence and skip download.
+If checkpoints already exist at that location, verify their presence and skip download. If they're not there, don't go searching other directories for them (see `CLAUDE.md`'s filesystem-scope rule) — ask the user for the absolute path if they say they already have them somewhere else.
 
 Both are downloaded because `physics-planner`/`fine-tuner` need to pick one as `pretrain_ckpt_path`:
 - `checkpoints.20M.a4.last.ckpt` is **EveNet-Full** (Stage 2: backbone + jointly pretrained Classification + TruthGeneration + ReconGeneration heads). Recommended default — the EveNet paper shows it consistently outperforms SSL-only as a fine-tuning starting point, including on decay topologies unseen during pretraining.
